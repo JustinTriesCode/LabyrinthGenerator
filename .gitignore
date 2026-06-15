@@ -14,3 +14,7 @@
 *.exe
 *.out
 main
+
+# Other
+notes.txt
+*.txt
