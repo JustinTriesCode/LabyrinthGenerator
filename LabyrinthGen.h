@@ -22,12 +22,13 @@ private:
     std::vector<uint8_t> grid;
 
     int getIndex(int x, int y) const;
-    std::vector<int> getUnvisitedNeighbours(int currCell) const;
+    std::vector<int> getUnvisitedNeighbours(int currCell, 
+        const std::vector<int>& distances) const;
     void connectCells(int cellA, int cellB);
 
     // Labyrinth generattion functions
-    int applyMask(float density);
-    int generateSpanningTree(float structureBias);
+    int applyMask(float density, std::vector<int>& distances);
+    int generateSpanningTree(float structureBias, std::vector<int>& distances);
     void repairIslands();
     void carveLoops(float loopFreq);
     void mirrorGrid(int dupes); 
