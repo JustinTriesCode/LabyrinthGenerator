@@ -30,7 +30,7 @@ private:
     // Labyrinth generattion functions
     int applyMask(float density, std::vector<int> &distances);
     int generateSpanningTree(float structureBias, std::vector<int> &distances);
-    void repairIslands();
+    void repairIslands(std::vector<int> &distances);
     void carveLoops(float loopFreq);
     void mirrorGrid(int dupes);
 

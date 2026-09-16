@@ -30,7 +30,7 @@ void LabyrinthGen::buildLabyrinth(float density, float structureBias,
     // check threshold
     if (expected > 0 && actual > 0 && static_cast<float>(actual) / expected < threshold)
     {
-        repairIslands();
+        repairIslands(distances);
     }
     carveLoops(loopFreq);
     mirrorGrid(dupes);
@@ -139,13 +139,139 @@ int LabyrinthGen::generateSpanningTree(float structureBias, std::vector<int> &di
 }
 
 // reconnects any traversable tiles not connected to main path network
-void LabyrinthGen::repairIslands()
+void LabyrinthGen::repairIslands(std::vector<int> &distances)
 {
-    // todo
-    //  find unvisited, non void cells
-    //  flood fill from there for island coords
-    //  resolve
-    //  repeat check
+    bool islandFound = true;
+    while (islandFound)
+    {
+        islandFound = false;
+        std::vector<int> currentIsland;
+
+        // find unvisited, non void cells
+        for (int i = 0; i < width * height; i++)
+        {
+            if (distances[i] == -1)
+            {
+                // flood fill to find connected cells
+                std::deque<int> queue;
+                queue.push_back(i);
+
+                distances[i] = -3; // temp set to -3 to avoid revisiting
+
+                while (!queue.empty())
+                {
+                    int currCell = queue.front();
+                    queue.pop_front();
+                    currentIsland.push_back(currCell);
+
+                    int x = currCell % width;
+                    int y = currCell / width;
+
+                    if (y > 0 && distances[getIndex(x, y - 1)] == -1)
+                    {
+                        distances[getIndex(x, y - 1)] = -3;
+                        queue.push_back(getIndex(x, y - 1));
+                    }
+                    if (y < height - 1 && distances[getIndex(x, y + 1)] == -1)
+                    {
+                        distances[getIndex(x, y + 1)] = -3;
+                        queue.push_back(getIndex(x, y + 1));
+                    }
+                    if (x > 0 && distances[getIndex(x - 1, y)] == -1)
+                    {
+                        distances[getIndex(x - 1, y)] = -3;
+                        queue.push_back(getIndex(x - 1, y));
+                    }
+                    if (x < width - 1 && distances[getIndex(x + 1, y)] == -1)
+                    {
+                        distances[getIndex(x + 1, y)] = -3;
+                        queue.push_back(getIndex(x + 1, y));
+                    }
+                }
+                break;
+            }
+        }
+        if (currentIsland.empty())
+            continue;
+
+        // find the closest cell in the main labyrinth
+        int bestIslandCell = -1;
+        int bestMainCell = -1;
+        int minDistance = width * height + 1;
+
+        for (int islandCell : currentIsland)
+        {
+            int ix = islandCell % width;
+            int iy = islandCell / width;
+
+            for (int j = 0; j < width * height; j++)
+            {
+                if (distances[j] >= 0) // It's part of the main maze
+                {
+                    int mx = j % width;
+                    int my = j / width;
+                    int dist = std::abs(ix - mx) + std::abs(iy - my);
+
+                    if (dist < minDistance)
+                    {
+                        minDistance = dist;
+                        bestIslandCell = islandCell;
+                        bestMainCell = j;
+                    }
+                }
+            }
+        }
+
+        // Tunnel from bestMainCell to bestIslandCell
+        if (bestIslandCell != -1 && bestMainCell != -1)
+        {
+            int currX = bestMainCell % width;
+            int currY = bestMainCell / width;
+            int targetX = bestIslandCell % width;
+            int targetY = bestIslandCell / width;
+
+            int prevCell = bestMainCell;
+
+            // Tunnel horizontally then vertically (for L-shape)
+            while (currX != targetX || currY != targetY)
+            {
+                if (currX != targetX)
+                {
+                    currX += (targetX > currX) ? 1 : -1;
+                }
+                else
+                {
+                    currY += (targetY > currY) ? 1 : -1;
+                }
+
+                int stepCell = getIndex(currX, currY);
+                connectCells(prevCell, stepCell);
+                distances[stepCell] = distances[prevCell] + 1;
+                prevCell = stepCell;
+            }
+
+            // Reset the rest of the island back to -1
+            for (int cell : currentIsland)
+            {
+                if (distances[cell] == -3)
+                    distances[cell] = -1;
+            }
+
+            // Carve paths through the newly connected island
+            // Temporarily change startX/startY to our bridge point so the spanning tree generates from here
+            int tempX = startX;
+            int tempY = startY;
+            startX = targetX;
+            startY = targetY;
+
+            generateSpanningTree(0.5f, distances);
+
+            startX = tempX;
+            startY = tempY;
+
+            islandFound = true;
+        }
+    }
 }
 
 /*

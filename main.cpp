@@ -92,4 +92,9 @@ int main(int argc, char *argv[])
     return 0;
 }
 
-// g++ main.cpp -o main
+// Reminders:
+// g++ main.cpp LabyrinthGen.cpp -o main
+
+// ./main density structureBias loopFreq dupes startX startY
+// example:
+// ./main 0.2 0.4 0.1 3 0 0
